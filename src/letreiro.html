@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Letreiro LED – Scroller</title>
+  <style>
+    :root{
+      --bg:#000000;
+      --fg:#ff2b2b;     /* cor do texto */
+      --glow:#ff5a5a;   /* brilho do LED */
+      --speed:12s;      /* duração da animação para 1 ciclo */
+      --size:12vw;      /* tamanho da fonte base */
+      --gap:6vw;        /* espaço entre repetições */
+      --uppercase:0;    /* 1 liga maiúsculas forçadas */
+      --weight:800;     /* peso da fonte */
+    }
+
+    html,body{
+      height:100%;
+      margin:0;
+      background:var(--bg);
+      color:var(--fg);
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Arial, sans-serif;
+      overscroll-behavior: none;
+    }
+
+    .wrap{ display:flex; flex-direction:column; height:100dvh; gap:.6rem; }
+
+    /* FAIXA DO LETREIRO */
+    .marquee{ position:relative; flex:1 1 auto; overflow:hidden; background:var(--bg); isolation:isolate; }
+    .track{ position:absolute; inset:0; display:flex; align-items:center; gap:var(--gap); width:max-content; animation: scroll var(--speed) linear infinite; will-change: transform; }
+    .track.paused{ animation-play-state: paused; }
+    .chunk{ display:flex; align-items:center; gap:var(--gap); }
+    .msg{ white-space:nowrap; font-size:var(--size); font-weight:var(--weight); letter-spacing:.06em; line-height:1; color:var(--fg); text-transform: none; text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased; filter: saturate(1.1); }
+    .msg.upper{ text-transform: uppercase; }
+    .led{ text-shadow: 0 0 .25em var(--glow), 0 0 .6em var(--glow), 0 0 1.2em var(--glow), 0 0 2em color-mix(in srgb, var(--glow) 60%, transparent); }
+
+    @keyframes scroll{ from{ transform: translateX(0); } to{ transform: translateX(-50%); } }
+    .rtl{ animation-direction: reverse; }
+
+    /* CONTROLES */
+    .controls{ flex:0 0 auto; display:grid; grid-template-columns: repeat(12, 1fr); gap:.6rem; padding: .6rem .8rem .9rem; background: color-mix(in srgb, var(--bg) 86%, #111 14%); border-top:1px solid color-mix(in srgb, var(--fg) 20%, transparent); }
+    .controls input[type="text"]{ grid-column: 1 / -1; }
+    .controls label{ font-size:.9rem; color:#ddd; opacity:.9; }
+    .controls input, .controls select, .controls button{ width:100%; }
+    .controls .row{ display:flex; gap:.6rem; align-items:center; }
+    .controls .col-span-3{ grid-column: span 3; }
+    .controls .col-span-4{ grid-column: span 4; }
+    .controls .col-span-5{ grid-column: span 5; }
+    .controls .col-span-6{ grid-column: span 6; }
+    .controls .col-span-12{ grid-column: 1 / -1; }
+
+    .btn{ background:#1f1f1f; color:#f0f0f0; border:1px solid #333; padding:.7rem .8rem; border-radius:.8rem; font-weight:600; }
+    .btn:active{ transform: scale(.99); }
+    .toggle{ display:flex; gap:.6rem; align-items:center; }
+    .muted{ opacity:.75; }
+    .footer{ text-align:center; font-size:.84rem; color:#bbb; padding:.4rem 0 .6rem; }
+
+    @media (max-width: 520px){
+      :root{ --size:14vw; --gap:10vw; }
+      .controls{ grid-template-columns: repeat(6, 1fr); }
+      .controls .col-span-6{ grid-column: 1 / -1; }
+      .controls .col-span-4{ grid-column: span 3; }
+      .controls .col-span-5{ grid-column: span 6; }
+      .controls .col-span-3{ grid-column: span 3; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="marquee" id="marquee" aria-label="Faixa do letreiro">
+      <div class="track led" id="track">
+        <div class="chunk"><span class="msg upper" id="text1">BIO MOLEXPLORER</span></div>
+        <div class="chunk"><span class="msg upper" id="text2">BIO MOLEXPLORER</span></div>
+      </div>
+    </div>
+
+    <form class="controls" id="panel" autocomplete="off">
+      <input class="col-span-12" type="text" id="inputText" placeholder="Digite sua mensagem…" value="BIO MOLEXPLORER" />
+
+      <div class="col-span-3">
+        <label for="fg">Cor do texto</label>
+        <input type="color" id="fg" value="#ff2b2b" />
+      </div>
+      <div class="col-span-3">
+        <label for="glowColor">Cor do brilho</label>
+        <input type="color" id="glowColor" value="#ff5a5a" />
+      </div>
+      <div class="col-span-3">
+        <label for="bg">Cor do fundo</label>
+        <input type="color" id="bg" value="#000000" />
+      </div>
+      <div class="col-span-3">
+        <label for="size">Tamanho</label>
+        <input type="range" id="size" min="6" max="26" step="1" value="12" />
+      </div>
+
+      <div class="col-span-3">
+        <label for="speed">Velocidade</label>
+        <input type="range" id="speed" min="4" max="40" step="1" value="12" />
+      </div>
+      <div class="col-span-3">
+        <label for="gap">Espaçamento</label>
+        <input type="range" id="gap" min="2" max="30" step="1" value="6" />
+      </div>
+      <div class="col-span-3">
+        <label for="weight">Peso</label>
+        <input type="range" id="weight" min="300" max="900" step="100" value="800" />
+      </div>
+      <div class="col-span-3">
+        <label for="direction">Direção</label>
+        <select id="direction">
+          <option value="ltr">← (esquerda)</option>
+          <option value="rtl">→ (direita)</option>
+        </select>
+      </div>
+
+      <div class="col-span-6 row">
+        <label class="toggle"><input type="checkbox" id="uppercase" checked /> MAIÚSCULAS</label>
+        <label class="toggle"><input type="checkbox" id="glow" checked /> Brilho LED</label>
+        <label class="toggle"><input type="checkbox" id="pause" /> Pausar</label>
+      </div>
+
+      <div class="col-span-6 row">
+        <button type="button" class="btn" id="fullscreen">Tela cheia</button>
+        <button type="button" class="btn" id="hide">Ocultar controles</button>
+        <button type="button" class="btn" id="download">Baixar HTML</button>
+      </div>
+
+      <div class="col-span-6 row">
+        <label for="recSeconds">Duração (s)</label>
+        <input type="number" id="recSeconds" min="1" max="600" value="15" />
+        <button type="button" class="btn" id="recStart">Gravar vídeo</button>
+        <button type="button" class="btn" id="recStop">Parar e baixar</button>
+      </div>
+
+      <div class="col-span-12 footer muted">Dica: vire o celular na horizontal para letras gigantes.</div>
+    </form>
+  </div>
+
+  <script>
+    const $ = (sel) => document.querySelector(sel);
+    const track = $('#track');
+    const t1 = $('#text1');
+    const t2 = $('#text2');
+    const panel = $('#panel');
+
+    // Estado persistido
+    const state = {
+      message: localStorage.getItem('led:message') || 'BIO MOLEXPLORER',
+      fg: localStorage.getItem('led:fg') || '#ff2b2b',
+      glowColor: localStorage.getItem('led:glowColor') || '#ff5a5a',
+      bg: localStorage.getItem('led:bg') || '#000000',
+      speed: +(localStorage.getItem('led:speed') || 12),
+      size: +(localStorage.getItem('led:size') || 12),
+      gap: +(localStorage.getItem('led:gap') || 6),
+      uppercase: JSON.parse(localStorage.getItem('led:uppercase') ?? 'true'),
+      glow: JSON.parse(localStorage.getItem('led:glow') ?? 'true'),
+      weight: +(localStorage.getItem('led:weight') || 800),
+      dir: localStorage.getItem('led:dir') || 'ltr',
+      paused: JSON.parse(localStorage.getItem('led:paused') ?? 'false'),
+    };
+
+    // Inputs
+    const inputText = $('#inputText');
+    const fg = $('#fg');
+    const glowColor = $('#glowColor');
+    const bg = $('#bg');
+    const speed = $('#speed');
+    const size = $('#size');
+    const gap = $('#gap');
+    const weight = $('#weight');
+    const uppercase = $('#uppercase');
+    const glow = $('#glow');
+    const pause = $('#pause');
+    const dirSel = $('#direction');
+    const fsBtn = $('#fullscreen');
+    const hideBtn = $('#hide');
+    const dlBtn = $('#download');
+    const recStartBtn = $('#recStart');
+    const recStopBtn  = $('#recStop');
+    const recSeconds  = $('#recSeconds');
+
+    function setVar(name, value){ document.documentElement.style.setProperty(name, value); }
+
+    function apply(){
+      setVar('--fg', state.fg);
+      setVar('--glow', state.glowColor);
+      setVar('--bg', state.bg);
+      setVar('--speed', state.speed + 's');
+      setVar('--size', state.size + 'vw');
+      setVar('--gap', state.gap + 'vw');
+      setVar('--weight', state.weight);
+
+      t1.textContent = state.message || '\u00A0';
+      t2.textContent = state.message || '\u00A0';
+
+      t1.classList.toggle('upper', !!state.uppercase);
+      t2.classList.toggle('upper', !!state.uppercase);
+
+      track.classList.toggle('led', !!state.glow);
+      track.classList.toggle('rtl', state.dir === 'rtl');
+      track.classList.toggle('paused', !!state.paused);
+
+      // persistir
+      localStorage.setItem('led:message', state.message);
+      localStorage.setItem('led:fg', state.fg);
+      localStorage.setItem('led:glowColor', state.glowColor);
+      localStorage.setItem('led:bg', state.bg);
+      localStorage.setItem('led:speed', String(state.speed));
+      localStorage.setItem('led:size', String(state.size));
+      localStorage.setItem('led:gap', String(state.gap));
+      localStorage.setItem('led:uppercase', JSON.stringify(!!state.uppercase));
+      localStorage.setItem('led:glow', JSON.stringify(!!state.glow));
+      localStorage.setItem('led:weight', String(state.weight));
+      localStorage.setItem('led:dir', state.dir);
+      localStorage.setItem('led:paused', JSON.stringify(!!state.paused));
+    }
+
+    // Inicializar valores dos inputs
+    inputText.value = state.message;
+    fg.value = state.fg;
+    glowColor.value = state.glowColor;
+    bg.value = state.bg;
+    speed.value = state.speed;
+    size.value = state.size;
+    gap.value = state.gap;
+    weight.value = state.weight;
+    uppercase.checked = !!state.uppercase;
+    glow.checked = !!state.glow;
+    pause.checked = !!state.paused;
+    dirSel.value = state.dir;
+    apply();
+
+    // Eventos
+    inputText.addEventListener('input', (e)=>{ state.message = e.target.value; apply(); });
+    fg.addEventListener('input', (e)=>{ state.fg = e.target.value; apply(); });
+    glowColor.addEventListener('input', (e)=>{ state.glowColor = e.target.value; apply(); });
+    bg.addEventListener('input', (e)=>{ state.bg = e.target.value; apply(); });
+    speed.addEventListener('input', (e)=>{ state.speed = +e.target.value; apply(); });
+    size.addEventListener('input', (e)=>{ state.size = +e.target.value; apply(); });
+    gap.addEventListener('input', (e)=>{ state.gap = +e.target.value; apply(); });
+    weight.addEventListener('input', (e)=>{ state.weight = +e.target.value; apply(); });
+    uppercase.addEventListener('change', (e)=>{ state.uppercase = e.target.checked; apply(); });
+    glow.addEventListener('change', (e)=>{ state.glow = e.target.checked; apply(); });
+    pause.addEventListener('change', (e)=>{ state.paused = e.target.checked; apply(); });
+    dirSel.addEventListener('change', (e)=>{ state.dir = e.target.value; apply(); });
+
+    fsBtn.addEventListener('click', async ()=>{
+      try{
+        const el = document.documentElement;
+        if(!document.fullscreenElement){ await el.requestFullscreen(); }
+        else{ await document.exitFullscreen(); }
+      }catch(err){ alert('Tela cheia não suportada neste navegador.'); }
+    });
+
+    hideBtn.addEventListener('click', ()=>{ panel.style.display = (panel.style.display === 'none' ? 'grid' : 'none'); });
+
+    // Baixar HTML com o estado atual inline (variáveis CSS já aplicadas)
+    dlBtn.addEventListener('click', ()=>{
+      const html = '<!DOCTYPE html>' + document.documentElement.outerHTML;
+      const blob = new Blob([html], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'letreiro_led.html'; a.click();
+      setTimeout(()=> URL.revokeObjectURL(url), 1000);
+    });
+
+    // ====== Gravação de VÍDEO da tela (aba) usando MediaRecorder ======
+    let mediaRecorder = null;
+    let recordedChunks = [];
+    let currentStream = null;
+
+    function pickMime(){
+      const candidates = [
+        'video/webm;codecs=vp9',
+        'video/webm;codecs=vp8',
+        'video/webm',
+        'video/mp4' // pode não ser suportado
+      ];
+      for(const t of candidates){ if(MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t)) return t; }
+      return '';
+    }
+
+    async function startRecording(){
+      const sec = Math.max(1, Math.min(600, parseInt(recSeconds.value||'15',10)));
+      try{
+        const stream = await navigator.mediaDevices.getDisplayMedia({
+          video: { frameRate: 60 },
+          audio: false,
+          preferCurrentTab: true
+        });
+        currentStream = stream;
+        const mime = pickMime();
+        recordedChunks = [];
+        mediaRecorder = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+        mediaRecorder.ondataavailable = (e)=>{ if(e.data && e.data.size){ recordedChunks.push(e.data); } };
+        mediaRecorder.onstop = ()=>{
+          const blob = new Blob(recordedChunks, { type: mediaRecorder.mimeType || 'video/webm' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          const ext = (mediaRecorder.mimeType||'webm').includes('mp4') ? 'mp4' : 'webm';
+          a.download = 'letreiro_led.'+ext;
+          a.click();
+          setTimeout(()=> URL.revokeObjectURL(url), 1500);
+          recordedChunks = [];
+        };
+        mediaRecorder.start();
+        // Auto-stop após N segundos
+        setTimeout(()=>{ if(mediaRecorder && mediaRecorder.state==='recording'){ stopRecording(); } }, sec*1000);
+      }catch(err){
+        alert('Não foi possível iniciar a gravação. Dica: escolha a aba atual na janela de seleção.\n'+err);
+      }
+    }
+
+    function stopRecording(){
+      try{ if(mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop(); }catch(_){ }
+      try{ if(currentStream){ currentStream.getTracks().forEach(t=>t.stop()); currentStream = null; } }catch(_){ }
+    }
+
+    recStartBtn.addEventListener('click', startRecording);
+    recStopBtn.addEventListener('click', stopRecording);
+
+    // Garantir animação contínua mesmo com interações
+    document.addEventListener('visibilitychange', ()=>{
+      if(!document.hidden && !state.paused){ track.style.animationPlayState = 'running'; }
+    });
+  </script>
+</body>
+</html>
