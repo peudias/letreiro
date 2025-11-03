@@ -1,7 +1,4 @@
 {
-  "cleanUrls": true,
-  "trailingSlash": false,
-  "routes": [{ "src": "/(.*)", "dest": "/index.html" }],
   "headers": [
     {
       "source": "/(.*)",
@@ -16,5 +13,6 @@
         }
       ]
     }
-  ]
+  ],
+  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
 }
